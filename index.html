@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Store - متجر الخدمات الرقمية</title>
+    
+    <!-- خط Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- React & Babel -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.292.0?external=react"
+        }
+    }
+    </script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+            Zap, ShoppingCart, MessageCircle, Settings, Plus, Trash2, 
+            Edit, Save, X, Image as ImageIcon, LayoutDashboard, LogOut, 
+            Loader, RefreshCw, Lock, CheckCircle, AlertCircle, AlertTriangle, Upload 
+        } from 'lucide-react';
+
+        // استيراد Firebase
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, doc, getDoc, setDoc, addDoc, deleteDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // ---------------------------------------------------------
+        // ⚠️ إعدادات FIREBASE ⚠️
+        // ---------------------------------------------------------
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYMLw1JplZjmgFRk5wswT0KRxVB6gyhsE",
+            authDomain: "store-ba639.firebaseapp.com",
+            projectId: "store-ba639",
+            storageBucket: "store-ba639.firebasestorage.app",
+            messagingSenderId: "662215087894",
+            appId: "1:662215087894:web:2df92817f57efd1debe237",
+            measurementId: "G-2MF893RVEK"
+        };
+
+        // التحقق مما إذا كانت الإعدادات موجودة
+        const isFirebaseConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey.length > 0;
+        
+        let app, auth, db, appId;
+
+        if (isFirebaseConfigured) {
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                appId = "digital-store-v1";
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+            }
+        }
+
+        // --- البيانات الافتراضية ---
+        const DEFAULT_PRODUCTS = [
+            {
+                id: "p1",
+                name: "Office 365",
+                category: "Productivity",
+                duration: "سنة كاملة",
+                description: "حزمة الأوفيس الأصلية (5 أجهزة) + 1 تيرا تخزين سحابي OneDrive.",
+                price: "عرض خاص",
+                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Microsoft_365_%282022%29.svg/1024px-Microsoft_365_%282022%29.svg.png"
+            },
+            {
+                id: "p2",
+                name: "Google AI Premium",
+                category: "AI",
+                duration: "سنة كاملة",
+                description: "أقوى ذكاء اصطناعي Gemini Advanced + 2 تيرا تخزين Google One.",
+                price: "عرض خاص",
+                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Google_Gemini_logo.svg/1200px-Google_Gemini_logo.svg.png"
+            },
+            {
+                id: "p3",
+                name: "Adobe Creative Cloud",
+                category: "Design",
+                duration: "4 شهور",
+                description: "كل تطبيقات أدوبي (Photoshop, Illustrator, Premiere) مع ميزات الذكاء الاصطناعي.",
+                price: "عرض خاص",
+                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Creative_Cloud.svg/1024px-Creative_Cloud.svg.png"
+            },
+            {
+                id: "p4",
+                name: "Autodesk All Apps",
+                category: "Engineering",
+                duration: "سنة كاملة",
+                description: "الحزمة الهندسية الكاملة (AutoCAD, Revit, Max) بتفعيل رسمي.",
+                price: "خصم حصري",
+                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/b/b1/Autodesk_Logo.svg"
+            },
+            {
+                id: "p5",
+                name: "Canva Pro",
+                category: "Design",
+                duration: "سنة كاملة",
+                description: "تصميم بلا حدود، قوالب مفتوحة، إزالة خلفيات وأدوات سحرية.",
+                price: "عرض خاص",
+                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/0/08/Canva_icon_2021.svg"
+            },
+            {
+                id: "p6",
+                name: "ChatGPT Plus",
+                category: "AI",
+                duration: "شهر واحد",
+                description: "الذكاء الاصطناعي الأقوى GPT-4o، تحليل بيانات، ورسم صور DALL·E 3.",
+                price: "عرض خاص",
+                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/800px-ChatGPT_logo.svg.png"
+            },
+            {
+                id: "p7",
+                name: "Perplexity Pro",
+                category: "AI",
+                duration: "سنة كاملة",
+                description: "محرك البحث الذكي، يجمع بين GPT-4 و Claude 3 مع المصادر.",
+                price: "عرض خاص",
+                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1d/Perplexity_AI_logo.svg" 
+            },
+            {
+                id: "p8",
+                name: "Picsart Gold",
+                category: "Design",
+                duration: "شهر واحد",
+                description: "ستوديو تعديل الصور للموبايل، فلاتر حصرية وبدون إعلانات.",
+                price: "عرض خاص",
+                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3e/PicsArt-Logo.svg"
+            }
+        ];
+
+        // --- المكونات (Components) ---
+
+        const Loading = () => (
+            <div className="flex h-screen items-center justify-center bg-slate-50">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader className="w-10 h-10 text-blue-600 animate-spin" />
+                    <p className="text-slate-500 font-bold">جاري التحميل...</p>
+                </div>
+            </div>
+        );
+
+        const ProductCard = ({ product, onOrder }) => {
+            const [imageError, setImageError] = useState(false);
+
+            useEffect(() => {
+                setImageError(false);
+            }, [product.imageUrl]);
+
+            return (
+                <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 border border-slate-100 flex flex-col h-full group">
+                    <div className="h-48 overflow-hidden bg-white border-b border-slate-50 relative flex items-center justify-center p-6">
+                        {product.imageUrl && !imageError ? (
+                            <img 
+                                src={product.imageUrl} 
+                                alt={product.name} 
+                                className="object-contain w-full h-full transform group-hover:scale-110 transition duration-500"
+                                onError={() => setImageError(true)}
+                            />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center text-slate-300 group-hover:text-blue-500 transition">
+                                <ImageIcon className="w-16 h-16 mb-2" />
+                                <span className="text-xs font-medium">صورة غير متاحة</span>
+                            </div>
+                        )}
+                        <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md z-10">
+                            {product.category}
+                        </div>
+                    </div>
+                    
+                    <div className="p-6 flex flex-col flex-grow">
+                        <div className="flex justify-between items-start mb-2">
+                            <h3 className="text-xl font-bold text-slate-900">{product.name}</h3>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-md font-bold">
+                                {product.duration}
+                            </span>
+                            <span className="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-md font-bold">
+                                {product.price}
+                            </span>
+                        </div>
+
+                        <p className="text-slate-500 text-sm mb-6 leading-relaxed flex-grow line-clamp-3">
+                            {product.description}
+                        </p>
+
+                        <button 
+                            onClick={() => onOrder(product.name)}
+                            className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition flex items-center justify-center gap-2 mt-auto"
+                        >
+                            <span>اطلب الآن</span>
+                            <MessageCircle className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminProductItem = ({ product, onDelete, onEdit }) => (
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center gap-4">
+                <div className="w-16 h-16 bg-white rounded-lg border border-slate-100 flex-shrink-0 overflow-hidden flex items-center justify-center p-2">
+                    {product.imageUrl ? (
+                        <img src={product.imageUrl} alt="" className="w-full h-full object-contain" />
+                    ) : (
+                        <ImageIcon className="w-full h-full text-slate-300" />
+                    )}
+                </div>
+                
+                <div className="flex-grow text-center md:text-right">
+                    <h4 className="font-bold text-slate-900">{product.name}</h4>
+                    <p className="text-sm text-slate-500">{product.category} | {product.duration}</p>
+                </div>
+
+                <div className="flex gap-2">
+                    <button onClick={() => onEdit(product)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="تعديل">
+                        <Edit className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => onDelete(product)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" title="حذف">
+                        <Trash2 className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+        );
+
+        // --- التطبيق الرئيسي ---
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [isOfflineMode, setIsOfflineMode] = useState(false);
+            
+            // UI State
+            const [showLoginModal, setShowLoginModal] = useState(false);
+            const [loginCode, setLoginCode] = useState('');
+            const [loginError, setLoginError] = useState('');
+            const [notification, setNotification] = useState(null);
+            
+            // Custom Confirmation Modal State
+            const [showConfirmModal, setShowConfirmModal] = useState(false);
+            const [confirmMessage, setConfirmMessage] = useState('');
+            const [confirmAction, setConfirmAction] = useState(null);
+
+            // Data State
+            const [products, setProducts] = useState([]);
+            const [whatsappNumber, setWhatsappNumber] = useState('201000000000');
+            
+            // Edit/Add State
+            const [isEditing, setIsEditing] = useState(false);
+            const [editingProduct, setEditingProduct] = useState(null);
+            const [formData, setFormData] = useState({
+                name: '', category: '', duration: '', price: '', description: '', imageUrl: ''
+            });
+
+            // Notification Helper
+            const showToast = (message, type = 'success') => {
+                setNotification({ message, type });
+                setTimeout(() => setNotification(null), 5000);
+            };
+
+            // Authentication & Initial Load
+            useEffect(() => {
+                if (isFirebaseConfigured) {
+                    const initAuth = async () => {
+                        try {
+                            await signInAnonymously(auth);
+                        } catch (error) {
+                            console.error("Auth Error:", error);
+                            if (error.code === 'auth/configuration-not-found' || error.code === 'auth/admin-restricted-operation' || error.code === 'auth/operation-not-allowed') {
+                                showToast("تنبيه: خاصية الدخول المجهول (Anonymous) غير مفعلة في Firebase. يعمل الموقع الآن بوضع التجربة.", 'error');
+                            } else {
+                                showToast(`خطأ في الاتصال: ${error.code}. يعمل الموقع بوضع التجربة.`, 'error');
+                            }
+                            // Fallback to offline mode
+                            setIsOfflineMode(true);
+                            setUser({ uid: "offline-user", isAnonymous: true });
+                            setLoading(false);
+                        }
+                    };
+                    initAuth();
+                    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+                        if (currentUser) {
+                            setUser(currentUser);
+                        }
+                    });
+                    return () => unsubscribe();
+                } else {
+                    // Demo Mode: Mock User
+                    setIsOfflineMode(true);
+                    setUser({ uid: "demo-user", isAnonymous: true });
+                    setLoading(false); 
+                }
+            }, []);
+
+            // Fetch Data
+            useEffect(() => {
+                if (isFirebaseConfigured && !isOfflineMode) {
+                    if (!user || !db) return;
+                    // Real Firestore Sync
+                    const productsRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+                    const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+
+                    const unsubProducts = onSnapshot(productsRef, (snapshot) => {
+                        const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        setProducts(prods);
+                        setLoading(false);
+                    }, (error) => {
+                        console.error("Error fetching products:", error);
+                        // If fetching fails (e.g. rules), fallback to local
+                        setIsOfflineMode(true);
+                        setLoading(false);
+                        if (products.length === 0) setProducts(DEFAULT_PRODUCTS);
+                    });
+
+                    const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            if (data.whatsapp) setWhatsappNumber(data.whatsapp);
+                        }
+                    }, (error) => console.error("Error fetching settings:", error));
+
+                    return () => {
+                        unsubProducts();
+                        unsubSettings();
+                    };
+                } else {
+                    // Demo/Offline Mode: Local Data
+                    if (products.length === 0) {
+                        setProducts(DEFAULT_PRODUCTS);
+                    }
+                    setLoading(false);
+                }
+            }, [user, isOfflineMode]);
+
+            // --- Handlers ---
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (loginCode === '123456') { 
+                    setIsAdmin(true);
+                    setShowLoginModal(false);
+                    setLoginCode('');
+                    setLoginError('');
+                    showToast('تم تسجيل الدخول بنجاح');
+                } else {
+                    setLoginError('كود المرور غير صحيح');
+                }
+            };
+
+            const handleWhatsappUpdate = async () => {
+                if (!isOfflineMode) {
+                    try {
+                        const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+                        await setDoc(settingsRef, { whatsapp: whatsappNumber }, { merge: true });
+                        showToast('تم تحديث رقم الواتساب بنجاح');
+                    } catch (error) {
+                        console.error("Error saving settings:", error);
+                        showToast('حدث خطأ أثناء الحفظ', 'error');
+                    }
+                } else {
+                    showToast('تم تحديث الرقم (وضع التجربة - لن يتم الحفظ)');
+                }
+            };
+
+            // Image Update Logic
+            const triggerUpdateImages = () => {
+                setConfirmMessage('سيتم محاولة تحديث صور المنتجات الحالية. هل تريد المتابعة؟');
+                setConfirmAction(() => executeUpdateImages);
+                setShowConfirmModal(true);
+            };
+
+            const executeUpdateImages = async () => {
+                setLoading(true);
+                setShowConfirmModal(false);
+                
+                try {
+                    if (!isOfflineMode) {
+                        const updates = products.map(p => {
+                            const pName = p.name.toLowerCase().trim();
+                            const defaultMatch = DEFAULT_PRODUCTS.find(d => 
+                                d.name.toLowerCase().trim().includes(pName) || pName.includes(d.name.toLowerCase().trim())
+                            );
+                            if (defaultMatch && defaultMatch.imageUrl) {
+                                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id);
+                                return setDoc(docRef, { imageUrl: defaultMatch.imageUrl }, { merge: true });
+                            }
+                            return Promise.resolve();
+                        });
+                        await Promise.all(updates);
+                    } else {
+                        // Offline Mode Update
+                        const updatedProducts = products.map(p => {
+                            const pName = p.name.toLowerCase().trim();
+                            const defaultMatch = DEFAULT_PRODUCTS.find(d => 
+                                d.name.toLowerCase().trim().includes(pName) || pName.includes(d.name.toLowerCase().trim())
+                            );
+                            return defaultMatch ? { ...p, imageUrl: defaultMatch.imageUrl } : p;
+                        });
+                        setProducts(updatedProducts);
+                    }
+                    showToast('تم تحديث الصور بنجاح');
+                } catch (error) {
+                    console.error(error);
+                    showToast('حدث خطأ أثناء التحديث', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Delete All Logic
+            const triggerDeleteAll = () => {
+                setConfirmMessage('تحذير: سيتم حذف جميع المنتجات! هذه العملية لا يمكن التراجع عنها.');
+                setConfirmAction(() => executeDeleteAll);
+                setShowConfirmModal(true);
+            };
+
+            const executeDeleteAll = async () => {
+                setShowConfirmModal(false);
+                if (products.length === 0) {
+                    showToast('القائمة فارغة بالفعل');
+                    return;
+                }
+                setLoading(true);
+                
+                try {
+                    if (!isOfflineMode) {
+                        const deletePromises = products.map(p => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id)));
+                        await Promise.all(deletePromises);
+                    } else {
+                        setProducts([]);
+                    }
+                    showToast('تم حذف جميع المنتجات');
+                } catch (error) {
+                    console.error(error);
+                    showToast('حدث خطأ أثناء الحذف', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Seed Data Logic
+            const handleSeedData = async () => {
+                setLoading(true);
+                try {
+                    if (!isOfflineMode) {
+                        const productsRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+                        for (const prod of DEFAULT_PRODUCTS) {
+                            await addDoc(productsRef, prod);
+                        }
+                    } else {
+                        // Generate random IDs for offline mode
+                        const demoProds = DEFAULT_PRODUCTS.map(p => ({...p, id: Math.random().toString(36).substr(2, 9)}));
+                        setProducts(demoProds);
+                    }
+                    showToast("تم استعادة جميع المنتجات بنجاح!");
+                } catch (err) {
+                    console.error(err);
+                    showToast("حدث خطأ أثناء الاستعادة", 'error');
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            const handleProductSubmit = async (e) => {
+                e.preventDefault();
+                
+                try {
+                    if (!isOfflineMode) {
+                        const productsRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+                        if (editingProduct) {
+                            const docRef = doc(productsRef, editingProduct.id);
+                            await setDoc(docRef, formData, { merge: true });
+                            showToast('تم تعديل المنتج بنجاح');
+                        } else {
+                            await addDoc(productsRef, formData);
+                            showToast('تم إضافة المنتج بنجاح');
+                        }
+                    } else {
+                        // Offline Mode
+                        if (editingProduct) {
+                            setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...formData } : p));
+                            showToast('تم تعديل المنتج (وضع التجربة)');
+                        } else {
+                            const newProd = { ...formData, id: Math.random().toString(36).substr(2, 9) };
+                            setProducts(prev => [...prev, newProd]);
+                            showToast('تم إضافة المنتج (وضع التجربة)');
+                        }
+                    }
+                    setIsEditing(false);
+                    setEditingProduct(null);
+                    setFormData({ name: '', category: '', duration: '', price: '', description: '', imageUrl: '' });
+                } catch (error) {
+                    console.error("Error:", error);
+                    showToast('حدث خطأ', 'error');
+                }
+            };
+
+            const handleDeleteProduct = (product) => {
+                setConfirmMessage(`هل أنت متأكد من حذف المنتج "${product.name}"؟`);
+                setConfirmAction(() => async () => {
+                    try {
+                        if (!isOfflineMode) {
+                            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', product.id);
+                            await deleteDoc(docRef);
+                        } else {
+                            setProducts(prev => prev.filter(p => p.id !== product.id));
+                        }
+                        showToast('تم حذف المنتج');
+                    } catch (error) {
+                        console.error(error);
+                        showToast('حدث خطأ أثناء الحذف', 'error');
+                    }
+                    setShowConfirmModal(false);
+                });
+                setShowConfirmModal(true);
+            };
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 800 * 1024) { 
+                        alert("حجم الصورة كبير جداً. يرجى اختيار صورة أصغر.");
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setFormData({ ...formData, imageUrl: reader.result });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleEditClick = (product) => {
+                setEditingProduct(product);
+                setFormData({
+                    name: product.name,
+                    category: product.category,
+                    duration: product.duration,
+                    price: product.price,
+                    description: product.description,
+                    imageUrl: product.imageUrl || ''
+                });
+                setIsEditing(true);
+            };
+
+            const handleAddNewClick = () => {
+                setEditingProduct(null);
+                setFormData({ name: '', category: '', duration: '', price: '', description: '', imageUrl: '' });
+                setIsEditing(true);
+            };
+
+            const openWhatsapp = (productName = null) => {
+                let message = "مرحباً، أريد الاستفسار عن خدماتكم.";
+                if (productName) {
+                    message = `مرحباً، أريد الاستفسار وطلب خدمة: ${productName}`;
+                }
+                window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
+            };
+
+            // Render
+            if (loading) return <Loading />;
+
+            const Toast = () => (
+                notification && (
+                    <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] flex items-center gap-2 px-6 py-3 rounded-full shadow-lg transition-all duration-300 ${notification.type === 'error' ? 'bg-red-500 text-white' : 'bg-slate-900 text-white'}`}>
+                        {notification.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle size={18} />}
+                        <span className="font-bold text-sm">{notification.message}</span>
+                    </div>
+                )
+            );
+
+            // Admin View
+            if (isAdmin) {
+                return (
+                    <div dir="rtl" className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
+                        <Toast />
+                        {isOfflineMode && (
+                            <div className="bg-yellow-100 border-b border-yellow-200 text-yellow-800 px-4 py-2 text-center text-sm font-bold flex justify-center items-center gap-2">
+                                <AlertTriangle size={16} />
+                                <span>تنبيه: الموقع يعمل في وضع التجربة. (السبب: الدخول المجهول غير مفعل في Firebase)</span>
+                            </div>
+                        )}
+                        <header className="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+                            <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <LayoutDashboard className="text-blue-400" />
+                                    <h1 className="text-xl font-bold">لوحة التحكم</h1>
+                                </div>
+                                <button onClick={() => setIsAdmin(false)} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm transition">
+                                    <LogOut size={16} />
+                                    خروج
+                                </button>
+                            </div>
+                        </header>
+
+                        <div className="container mx-auto px-4 py-8 space-y-8">
+                            <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-900">
+                                    <Settings className="text-blue-600" size={20} />
+                                    إعدادات التواصل والصيانة
+                                </h2>
+                                <div className="flex flex-col md:flex-row gap-4 items-end">
+                                    <div className="flex-grow w-full">
+                                        <label className="block text-sm font-medium text-slate-600 mb-1">رقم الواتساب (بدون +)</label>
+                                        <div dir="ltr" className="relative">
+                                            <input 
+                                                type="text" 
+                                                value={whatsappNumber}
+                                                onChange={(e) => setWhatsappNumber(e.target.value)}
+                                                className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-left"
+                                                placeholder="201000000000"
+                                            />
+                                        </div>
+                                    </div>
+                                    <button onClick={handleWhatsappUpdate} className="w-full md:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                                        <Save size={18} />
+                                        حفظ
+                                    </button>
+                                </div>
+                                
+                                <div className="mt-6 pt-6 border-t border-slate-100">
+                                    <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                        <Settings size={16} />
+                                        أدوات إصلاح البيانات
+                                    </h3>
+                                    <div className="flex gap-4 flex-wrap">
+                                        <button onClick={triggerUpdateImages} className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-200 transition flex items-center gap-2">
+                                            <ImageIcon size={16} />
+                                            تحديث الصور (محاولة)
+                                        </button>
+                                        <button onClick={triggerDeleteAll} className="bg-red-50 text-red-600 border border-red-100 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-100 transition flex items-center gap-2">
+                                            <AlertTriangle size={16} />
+                                            حذف جميع البيانات (تهيئة)
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                                        إذا لم تظهر الصور، اضغط على <b>"حذف جميع البيانات"</b>، ثم أكد الحذف. عندما تفرغ القائمة بالأسفل، اضغط على زر <b>"استعادة البيانات الافتراضية"</b> الكبير الذي سيظهر.
+                                    </p>
+                                </div>
+                            </section>
+
+                            <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-lg font-bold flex items-center gap-2 text-slate-900">
+                                        <ShoppingCart className="text-blue-600" size={20} />
+                                        المنتجات والخدمات
+                                    </h2>
+                                    <button onClick={handleAddNewClick} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center gap-2">
+                                        <Plus size={16} />
+                                        إضافة جديد
+                                    </button>
+                                </div>
+
+                                {products.length === 0 ? (
+                                    <div className="text-center py-12 bg-slate-50 rounded-xl border-dashed border-2 border-slate-300 flex flex-col items-center justify-center">
+                                        <p className="text-slate-500 mb-6 text-lg">قائمة المنتجات فارغة حالياً</p>
+                                        <button onClick={handleSeedData} className="bg-blue-100 text-blue-700 px-6 py-3 rounded-xl font-bold hover:bg-blue-200 transition flex items-center gap-2">
+                                            <RefreshCw size={20} />
+                                            استعادة البيانات الافتراضية (8 منتجات)
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {products.map(product => (
+                                            <AdminProductItem 
+                                                key={product.id} 
+                                                product={product} 
+                                                onEdit={handleEditClick}
+                                                onDelete={handleDeleteProduct} 
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+                        </div>
+
+                        {/* Modal */}
+                        {isEditing && (
+                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                                <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+                                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 z-10">
+                                        <h3 className="font-bold text-lg">
+                                            {editingProduct ? 'تعديل الخدمة' : 'إضافة خدمة جديدة'}
+                                        </h3>
+                                        <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-red-500">
+                                            <X size={24} />
+                                        </button>
+                                    </div>
+                                    
+                                    <form onSubmit={handleProductSubmit} className="p-6 space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-600 mb-1">اسم الخدمة</label>
+                                            <input required type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-600 mb-1">القسم</label>
+                                                <input type="text" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-600 mb-1">المدة</label>
+                                                <input type="text" value={formData.duration} onChange={(e) => setFormData({...formData, duration: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-600 mb-1">السعر / العرض</label>
+                                            <input type="text" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+
+                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                            <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                                <ImageIcon size={16} className="text-blue-600" />
+                                                صورة المنتج
+                                            </label>
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className="w-20 h-20 bg-white border border-slate-200 rounded-lg flex items-center justify-center overflow-hidden">
+                                                    {formData.imageUrl ? (
+                                                        <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-contain" />
+                                                    ) : (
+                                                        <ImageIcon className="text-slate-300" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="cursor-pointer bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-200 transition inline-flex items-center gap-2">
+                                                        <Upload size={16} />
+                                                        رفع صورة من الجهاز
+                                                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                                    </label>
+                                                    <p className="text-xs text-slate-400 mt-2">يفضل صور صغيرة الحجم (أقل من 800KB)</p>
+                                                </div>
+                                            </div>
+                                            <div className="relative">
+                                                <span className="absolute top-1/2 -translate-y-1/2 right-3 text-xs font-bold text-slate-400 bg-white px-1">أو رابط</span>
+                                                <input type="url" placeholder="https://example.com/image.png" value={formData.imageUrl} onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-left text-sm" />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-600 mb-1">الوصف</label>
+                                            <textarea rows={3} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                                        </div>
+
+                                        <div className="pt-4">
+                                            <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+                                                حفظ البيانات
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {showConfirmModal && (
+                            <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                                <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden scale-100 transform transition-all">
+                                    <div className="p-6 text-center">
+                                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                                            <AlertTriangle size={32} />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-slate-900 mb-2">تأكيد الإجراء</h3>
+                                        <p className="text-slate-500 mb-6 leading-relaxed">{confirmMessage}</p>
+                                        <div className="flex gap-3 justify-center">
+                                            <button onClick={() => setShowConfirmModal(false)} className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-200 transition">إلغاء</button>
+                                            <button onClick={confirmAction} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition shadow-lg shadow-red-200">نعم، متابعة</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            // Public View
+            return (
+                <div dir="rtl" className="font-sans text-slate-800 bg-slate-50 min-h-screen flex flex-col">
+                    <Toast />
+                    {isOfflineMode && (
+                        <div className="bg-yellow-100 border-b border-yellow-200 text-yellow-800 px-4 py-2 text-center text-sm font-bold flex justify-center items-center gap-2">
+                            <AlertTriangle size={16} />
+                            <span>تنبيه: الموقع يعمل في وضع التجربة. (السبب: الدخول المجهول غير مفعل في Firebase)</span>
+                        </div>
+                    )}
+                    <nav className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-40">
+                        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <Zap className="text-blue-600 w-8 h-8 fill-current" />
+                                <span className="text-2xl font-black tracking-tighter text-slate-900">Digital<span className="text-blue-600">Store</span></span>
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => openWhatsapp()} className="hidden md:flex items-center gap-2 bg-slate-900 text-white px-5 py-2 rounded-full hover:bg-slate-800 transition text-sm font-bold">
+                                    <MessageCircle size={18} />
+                                    تواصل معنا
+                                </button>
+                                <button onClick={() => setShowLoginModal(true)} className="text-slate-300 hover:text-slate-600 transition p-2" title="إعدادات المسؤول">
+                                    <Settings size={20} />
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <header className="relative bg-white overflow-hidden border-b border-slate-100">
+                        <div className="container mx-auto px-4 py-16 md:py-24 text-center z-10 relative">
+                            <span className="inline-block bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-sm font-bold mb-6 border border-blue-100">
+                                🚀 أفضل الأسعار والجودة
+                            </span>
+                            <h1 className="text-4xl md:text-6xl font-black mb-6 leading-[1.15] text-slate-900">
+                                ارتقِ بإنتاجيتك مع <br className="hidden md:block"/>
+                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+                                أفضل الخدمات الرقمية
+                                </span>
+                            </h1>
+                            <p className="text-lg md:text-xl text-slate-500 mb-10 max-w-2xl mx-auto leading-relaxed">
+                                نوفر لك اشتراكات أصلية ومفعلة لأشهر البرامج والخدمات العالمية (Microsoft, Adobe, AI) بأسعار تنافسية وضمان كامل.
+                            </p>
+                            <div className="flex flex-col sm:flex-row justify-center gap-4">
+                                <a href="#products" className="bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex justify-center items-center gap-2">
+                                    <ShoppingCart size={20} />
+                                    تصفح العروض
+                                </a>
+                            </div>
+                        </div>
+                    </header>
+
+                    <section id="products" className="py-20 flex-grow">
+                        <div className="container mx-auto px-4">
+                            <div className="text-center mb-16">
+                                <h2 className="text-3xl font-bold mb-4 text-slate-900">خدماتنا المميزة</h2>
+                                <div className="h-1 w-20 bg-blue-600 mx-auto rounded-full mb-4"></div>
+                                <p className="text-slate-500">اختر الباقة المناسبة لاحتياجاتك وابدأ فوراً</p>
+                            </div>
+
+                            {products.length === 0 ? (
+                                <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-dashed border-slate-200">
+                                    <p className="text-slate-400 mb-2">جاري تحميل المنتجات...</p>
+                                    <p className="text-xs text-slate-300">(إذا كنت المالك، يرجى الدخول للوحة التحكم لإضافة المنتجات)</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                                    {products.map(product => (
+                                        <ProductCard 
+                                            key={product.id} 
+                                            product={product} 
+                                            onOrder={openWhatsapp}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </section>
+
+                    <section className="py-16 bg-white border-t border-slate-100">
+                        <div className="container mx-auto px-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                                <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100">
+                                    <div className="w-14 h-14 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                        <Zap size={28} />
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-2">تفعيل فوري</h3>
+                                    <p className="text-slate-500 text-sm">استلم حسابك أو مفتاح التفعيل في أسرع وقت بعد الطلب.</p>
+                                </div>
+                                <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100">
+                                    <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                        <div className="font-bold text-2xl">100%</div>
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-2">ضمان كامل</h3>
+                                    <p className="text-slate-500 text-sm">جميع اشتراكاتنا أصلية ومضمونة طوال فترة الاشتراك.</p>
+                                </div>
+                                <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100">
+                                    <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                        <MessageCircle size={28} />
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-2">دعم فني</h3>
+                                    <p className="text-slate-500 text-sm">فريقنا جاهز لمساعدتك في أي وقت تواجه فيه مشكلة.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <footer className="bg-slate-900 text-slate-300 py-12 mt-auto">
+                        <div className="container mx-auto px-4 text-center">
+                            <div className="flex items-center justify-center gap-2 mb-6">
+                                <Zap className="text-blue-500 w-6 h-6" />
+                                <span className="text-xl font-bold text-white">Digital Store</span>
+                            </div>
+                            <p className="mb-8 max-w-md mx-auto text-sm text-slate-400">وجهتك الأولى للحصول على أفضل الخدمات الرقمية وبرامج التصميم والذكاء الاصطناعي.</p>
+                            <div className="border-t border-slate-800 pt-8 text-sm">
+                                &copy; 2024 Digital Store. جميع الحقوق محفوظة.
+                            </div>
+                        </div>
+                    </footer>
+
+                    {showLoginModal && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                            <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                                <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <Lock className="text-blue-600 w-5 h-5" />
+                                        <h3 className="font-bold text-lg">دخول الإدارة</h3>
+                                    </div>
+                                    <button onClick={() => setShowLoginModal(false)} className="text-slate-400 hover:text-red-500 transition"><X size={20} /></button>
+                                </div>
+                                <form onSubmit={handleLogin} className="p-6">
+                                    <div className="mb-4">
+                                        <label className="block text-sm text-slate-500 mb-2">كود الدخول (123456)</label>
+                                        <input type="password" value={loginCode} onChange={(e) => setLoginCode(e.target.value)} placeholder="******" className="w-full p-3 border border-slate-300 rounded-xl text-center tracking-[0.5em] text-lg font-bold focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
+                                    </div>
+                                    {loginError && (
+                                        <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4 flex items-center gap-2">
+                                            <AlertCircle size={16} />
+                                            {loginError}
+                                        </div>
+                                    )}
+                                    <button type="submit" className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition">
+                                        دخول
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
