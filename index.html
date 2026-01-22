@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Store - متجر الخدمات الرقمية</title>
+    <title>Tech Services Store - متجر الخدمات الرقمية</title>
     
     <!-- خط Cairo -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -130,7 +130,7 @@
                 duration: "سنة كاملة",
                 description: "الحزمة الهندسية الكاملة (AutoCAD, Revit, Max) بتفعيل رسمي.",
                 price: "خصم حصري",
-                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/b/b1/Autodesk_Logo.svg"
+                imageUrl: "https://cdn-public.softwarereviews.com/production/logos/offerings/12235/original/Autodesk_logo.png?1739482134"
             },
             {
                 id: "p5",
@@ -139,7 +139,7 @@
                 duration: "سنة كاملة",
                 description: "تصميم بلا حدود، قوالب مفتوحة، إزالة خلفيات وأدوات سحرية.",
                 price: "عرض خاص",
-                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/0/08/Canva_icon_2021.svg"
+                imageUrl: "https://talic.hku.hk/wp-content/files/edtools/EdTechIcon_Canva.webp"
             },
             {
                 id: "p6",
@@ -166,7 +166,7 @@
                 duration: "شهر واحد",
                 description: "ستوديو تعديل الصور للموبايل، فلاتر حصرية وبدون إعلانات.",
                 price: "عرض خاص",
-                imageUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3e/PicsArt-Logo.svg"
+                imageUrl: "https://picsarrtapk.com/wp-content/uploads/2025/06/Untitled-design-2.webp"
             }
         ];
 
@@ -285,7 +285,7 @@
 
             // Data State
             const [products, setProducts] = useState([]);
-            const [whatsappNumber, setWhatsappNumber] = useState('201000000000');
+            const [whatsappNumber, setWhatsappNumber] = useState('13155576166');
             
             // Edit/Add State
             const [isEditing, setIsEditing] = useState(false);
@@ -308,12 +308,7 @@
                             await signInAnonymously(auth);
                         } catch (error) {
                             console.error("Auth Error:", error);
-                            if (error.code === 'auth/configuration-not-found' || error.code === 'auth/admin-restricted-operation' || error.code === 'auth/operation-not-allowed') {
-                                showToast("تنبيه: خاصية الدخول المجهول (Anonymous) غير مفعلة في Firebase. يعمل الموقع الآن بوضع التجربة.", 'error');
-                            } else {
-                                showToast(`خطأ في الاتصال: ${error.code}. يعمل الموقع بوضع التجربة.`, 'error');
-                            }
-                            // Fallback to offline mode
+                            // Fallback to offline mode without showing the error toast immediately to user
                             setIsOfflineMode(true);
                             setUser({ uid: "offline-user", isAnonymous: true });
                             setLoading(false);
@@ -378,7 +373,7 @@
 
             const handleLogin = (e) => {
                 e.preventDefault();
-                if (loginCode === '123456') { 
+                if (loginCode === 'Sytra@25') { 
                     setIsAdmin(true);
                     setShowLoginModal(false);
                     setLoginCode('');
@@ -650,7 +645,7 @@
                                                 value={whatsappNumber}
                                                 onChange={(e) => setWhatsappNumber(e.target.value)}
                                                 className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-left"
-                                                placeholder="201000000000"
+                                                placeholder="13155576166"
                                             />
                                         </div>
                                     </div>
@@ -827,18 +822,21 @@
                     )}
                     <nav className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-40">
                         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                            <div className="flex items-center gap-2">
+                            {/* تم إضافة خاصية النقر المزدوج (Double Click) على الشعار لفتح لوحة التحكم سراً */}
+                            <div className="flex items-center gap-2 cursor-pointer select-none" onDoubleClick={() => setShowLoginModal(true)} title="Tech Services Store">
                                 <Zap className="text-blue-600 w-8 h-8 fill-current" />
-                                <span className="text-2xl font-black tracking-tighter text-slate-900">Digital<span className="text-blue-600">Store</span></span>
+                                <span className="text-2xl font-black tracking-tighter text-slate-900">Tech Services <span className="text-blue-600">Store</span></span>
                             </div>
                             <div className="flex gap-3">
                                 <button onClick={() => openWhatsapp()} className="hidden md:flex items-center gap-2 bg-slate-900 text-white px-5 py-2 rounded-full hover:bg-slate-800 transition text-sm font-bold">
                                     <MessageCircle size={18} />
                                     تواصل معنا
                                 </button>
-                                <button onClick={() => setShowLoginModal(true)} className="text-slate-300 hover:text-slate-600 transition p-2" title="إعدادات المسؤول">
+                                {/* تم إخفاء زر الإعدادات الظاهر */}
+                                {/* <button onClick={() => setShowLoginModal(true)} className="text-slate-300 hover:text-slate-600 transition p-2" title="إعدادات المسؤول">
                                     <Settings size={20} />
                                 </button>
+                                */}
                             </div>
                         </div>
                     </nav>
@@ -850,7 +848,7 @@
                             </span>
                             <h1 className="text-4xl md:text-6xl font-black mb-6 leading-[1.15] text-slate-900">
                                 ارتقِ بإنتاجيتك مع <br className="hidden md:block"/>
-                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 inline-block mt-2 md:mt-4">
                                 أفضل الخدمات الرقمية
                                 </span>
                             </h1>
@@ -925,11 +923,11 @@
                         <div className="container mx-auto px-4 text-center">
                             <div className="flex items-center justify-center gap-2 mb-6">
                                 <Zap className="text-blue-500 w-6 h-6" />
-                                <span className="text-xl font-bold text-white">Digital Store</span>
+                                <span className="text-xl font-bold text-white">Tech Services Store</span>
                             </div>
                             <p className="mb-8 max-w-md mx-auto text-sm text-slate-400">وجهتك الأولى للحصول على أفضل الخدمات الرقمية وبرامج التصميم والذكاء الاصطناعي.</p>
                             <div className="border-t border-slate-800 pt-8 text-sm">
-                                &copy; 2024 Digital Store. جميع الحقوق محفوظة.
+                                &copy; 2024 Tech Services Store. جميع الحقوق محفوظة.
                             </div>
                         </div>
                     </footer>
@@ -946,7 +944,7 @@
                                 </div>
                                 <form onSubmit={handleLogin} className="p-6">
                                     <div className="mb-4">
-                                        <label className="block text-sm text-slate-500 mb-2">كود الدخول (123456)</label>
+                                        <label className="block text-sm text-slate-500 mb-2">كود الدخول</label>
                                         <input type="password" value={loginCode} onChange={(e) => setLoginCode(e.target.value)} placeholder="******" className="w-full p-3 border border-slate-300 rounded-xl text-center tracking-[0.5em] text-lg font-bold focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
                                     </div>
                                     {loginError && (
