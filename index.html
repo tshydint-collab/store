@@ -307,8 +307,13 @@
                         try {
                             await signInAnonymously(auth);
                         } catch (error) {
-                            console.error("Auth Error:", error);
-                            // Fallback to offline mode without showing the error toast immediately to user
+                            // Handle authentication errors gracefully
+                            if (error.code === 'auth/admin-restricted-operation' || error.code === 'auth/configuration-not-found') {
+                                console.warn("Firebase Auth Error: Anonymous sign-in disabled. Switching to offline mode.");
+                            } else {
+                                console.error("Firebase Auth Error:", error);
+                            }
+                            // Fallback to offline mode
                             setIsOfflineMode(true);
                             setUser({ uid: "offline-user", isAnonymous: true });
                             setLoading(false);
